@@ -1,0 +1,31 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+
+# ---- Virtual Environments ----
+venv/
+env/
+.venv/
+ENV/
+Pipfile.lock
+poetry.lock
+
+# ---- Flask ----
+instance/
+*.db
+*.sqlite3
+*.sqlite
+*.log
+*.pid
+*.pyproj
+*.coverage
+htmlcov/
+.flaskenv
+.env
+.env.*
+
+# ---- PostgreSQL ----
+*.sql
+*.dump
+*.bak
