@@ -1,4 +1,4 @@
-export default function FormInput({ label, type = "text", name, value, onChange, required = false, options = [] }) {
+export default function FormInput({ label, type = "text", name, value, onChange, required = false, options = [], disabled = false }) {
   if (type === "select") {
     return (
       <div className="mb-4">
@@ -11,14 +11,19 @@ export default function FormInput({ label, type = "text", name, value, onChange,
           value={value}
           onChange={onChange}
           required={required}
-          className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          disabled={disabled}
+          className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <option value="">Select {label}</option>
-          {options.map((option, index) => (
-            <option key={index} value={option.value || option}>
-              {option.label || option}
-            </option>
-          ))}
+          {options.map((option, index) => {
+            const optionValue = option.value || option;
+            const optionLabel = option.label || option;
+            return (
+              <option key={index} value={typeof optionValue === 'string' ? optionValue.trim() : optionValue}>
+                {typeof optionLabel === 'string' ? optionLabel.trim() : optionLabel}
+              </option>
+            );
+          })}
         </select>
       </div>
     );
@@ -36,8 +41,9 @@ export default function FormInput({ label, type = "text", name, value, onChange,
           value={value}
           onChange={onChange}
           required={required}
+          disabled={disabled}
           rows="4"
-          className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline disabled:opacity-50 disabled:cursor-not-allowed"
         />
       </div>
     );
@@ -55,7 +61,8 @@ export default function FormInput({ label, type = "text", name, value, onChange,
         value={value}
         onChange={onChange}
         required={required}
-        className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+        disabled={disabled}
+        className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline disabled:opacity-50 disabled:cursor-not-allowed"
       />
     </div>
   );

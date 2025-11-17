@@ -1,32 +1,64 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { FaSearch, FaFilter, FaEdit, FaTrash, FaEye, FaTint } from 'react-icons/fa';
 import Link from 'next/link';
 import Navbar from '@/app/components/Navbar';
 import Table from '@/app/components/Table';
+import { donorAPI } from '@/app/lib/api';
 
 export default function DonorSearch() {
   const [searchTerm, setSearchTerm] = useState('');
   const [bloodTypeFilter, setBloodTypeFilter] = useState('');
   const [cityFilter, setCityFilter] = useState('');
-
-  // Sample donor data
-  const donors = [
-    { id: 1, name: 'John Doe', bloodType: 'O+', phone: '123-456-7890', city: 'New York', lastDonation: '2024-08-15', status: 'Available' },
-    { id: 2, name: 'Jane Smith', bloodType: 'A+', phone: '234-567-8901', city: 'Los Angeles', lastDonation: '2024-09-20', status: 'Available' },
-    { id: 3, name: 'Mike Johnson', bloodType: 'B+', phone: '345-678-9012', city: 'Chicago', lastDonation: '2024-10-05', status: 'Unavailable' },
-    { id: 4, name: 'Sarah Williams', bloodType: 'AB+', phone: '456-789-0123', city: 'Houston', lastDonation: '2024-07-30', status: 'Available' },
-    { id: 5, name: 'David Brown', bloodType: 'O-', phone: '567-890-1234', city: 'Phoenix', lastDonation: '2024-09-10', status: 'Available' },
-  ];
+  const [donors, setDonors] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
   const bloodTypes = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
 
+  useEffect(() => {
+    fetchDonors();
+  }, [bloodTypeFilter]);
+
+  const fetchDonors = async () => {
+    try {
+      setLoading(true);
+      // Trim the blood type filter to remove any whitespace
+      const trimmedFilter = bloodTypeFilter ? bloodTypeFilter.trim() : null;
+      const data = await donorAPI.getAll(trimmedFilter);
+      setDonors(Array.isArray(data) ? data : []);
+      setError('');
+    } catch (err) {
+      console.error('Failed to fetch donors:', err);
+      setError(err.message);
+      setDonors([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('Are you sure you want to delete this donor?')) {
+      return;
+    }
+
+    try {
+      await donorAPI.delete(id);
+      alert('Donor deleted successfully');
+      fetchDonors(); // Refresh the list
+    } catch (err) {
+      alert('Failed to delete donor: ' + err.message);
+    }
+  };
+
   const filteredDonors = donors.filter(donor => {
-    const matchesSearch = donor.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         donor.phone.includes(searchTerm);
-    const matchesBloodType = !bloodTypeFilter || donor.bloodType === bloodTypeFilter;
-    const matchesCity = !cityFilter || donor.city.toLowerCase().includes(cityFilter.toLowerCase());
-    return matchesSearch && matchesBloodType && matchesCity;
+    const matchesSearch = 
+      (donor.first_name && donor.first_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (donor.last_name && donor.last_name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (donor.phone && donor.phone.includes(searchTerm));
+    const matchesCity = !cityFilter || 
+      (donor.city && donor.city.toLowerCase().includes(cityFilter.toLowerCase()));
+    return matchesSearch && matchesCity;
   });
 
   return (
@@ -63,7 +95,7 @@ export default function DonorSearch() {
               </label>
               <select
                 value={bloodTypeFilter}
-                onChange={(e) => setBloodTypeFilter(e.target.value)}
+                onChange={(e) => setBloodTypeFilter(e.target.value.trim())}
                 className="shadow border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
               >
                 <option value="">All Types</option>
@@ -89,63 +121,85 @@ export default function DonorSearch() {
           </div>
         </div>
 
+        {/* Error State */}
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            Error loading donors: {error}
+          </div>
+        )}
+
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading donors...</p>
+          </div>
+        )}
+
         {/* Results Count */}
-        <div className="mb-4">
-          <p className="text-gray-700 font-semibold">
-            Found {filteredDonors.length} donor{filteredDonors.length !== 1 ? 's' : ''}
-          </p>
-        </div>
+        {!loading && (
+          <div className="mb-4">
+            <p className="text-gray-700 font-semibold">
+              Found {filteredDonors.length} donor{filteredDonors.length !== 1 ? 's' : ''}
+            </p>
+          </div>
+        )}
 
         {/* Donors Table */}
-        <Table headers={['Name', 'Blood Type', 'Phone', 'City', 'Last Donation', 'Status', 'Actions']}>
-          {filteredDonors.map(donor => (
-            <tr key={donor.id} className="hover:bg-gray-50">
-              <td className="px-6 py-4 whitespace-nowrap">
-                <div className="font-medium text-gray-900">{donor.name}</div>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <span className="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                  {donor.bloodType}
-                </span>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {donor.phone}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {donor.city}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                {donor.lastDonation}
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap">
-                <span className={`px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full ${
-                  donor.status === 'Available' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                }`}>
-                  {donor.status}
-                </span>
-              </td>
-              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                <div className="flex space-x-2">
-                  <Link href={`/donor/profile/${donor.id}`}>
-                    <button className="text-blue-600 hover:text-blue-900" title="View">
-                      <FaEye />
+        {!loading && filteredDonors.length > 0 && (
+          <Table headers={['Name', 'Blood Type', 'Phone', 'City', 'Status', 'Actions']}>
+            {filteredDonors.map(donor => (
+              <tr key={donor.donor_id} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="font-medium text-gray-900">
+                    {donor.first_name} {donor.last_name}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className="px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-red-100 text-red-800">
+                    {donor.blood_type}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {donor.phone || 'N/A'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  {donor.city || 'N/A'}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <span className={`px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full ${
+                    donor.status === 'available' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {donor.status}
+                  </span>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <div className="flex space-x-2">
+                    <Link href={`/donor/profile/${donor.donor_id}`}>
+                      <button className="text-blue-600 hover:text-blue-900" title="View">
+                        <FaEye />
+                      </button>
+                    </Link>
+                    <Link href={`/donor/edit/${donor.donor_id}`}>
+                      <button className="text-yellow-600 hover:text-yellow-900" title="Edit">
+                        <FaEdit />
+                      </button>
+                    </Link>
+                    <button 
+                      onClick={() => handleDelete(donor.donor_id)}
+                      className="text-red-600 hover:text-red-900" 
+                      title="Delete"
+                    >
+                      <FaTrash />
                     </button>
-                  </Link>
-                  <Link href={`/donor/edit/${donor.id}`}>
-                    <button className="text-yellow-600 hover:text-yellow-900" title="Edit">
-                      <FaEdit />
-                    </button>
-                  </Link>
-                  <button className="text-red-600 hover:text-red-900" title="Delete">
-                    <FaTrash />
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
-        </Table>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </Table>
+        )}
 
-        {filteredDonors.length === 0 && (
+        {!loading && filteredDonors.length === 0 && (
           <div className="text-center py-12 bg-white rounded-lg shadow">
             <p className="text-gray-500 text-lg">No donors found matching your criteria</p>
           </div>

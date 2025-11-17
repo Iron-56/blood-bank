@@ -1,16 +1,24 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { FaHandHoldingMedical, FaSave, FaTimes, FaTint } from 'react-icons/fa';
 import Navbar from '@/app/components/Navbar';
 import FormInput from '@/app/components/FormInput';
+import { requestAPI, hospitalAPI } from '@/app/lib/api';
 
 export default function RequestBlood() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [hospitals, setHospitals] = useState([]);
   const [formData, setFormData] = useState({
+    hospitalId: '',
     bloodType: '',
     units: '',
     urgency: '',
     patientName: '',
     patientAge: '',
+    patientGender: '',
     reason: '',
     doctorName: '',
     contactNumber: '',
@@ -18,31 +26,63 @@ export default function RequestBlood() {
     notes: '',
   });
 
-  const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+  useEffect(() => {
+    fetchHospitals();
+  }, []);
+
+  const fetchHospitals = async () => {
+    try {
+      const data = await hospitalAPI.getAll();
+      setHospitals(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Failed to fetch hospitals:', err);
+    }
   };
 
-  const handleSubmit = (e) => {
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+    setError('');
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Request submitted:', formData);
-    alert('Blood request submitted successfully! You will be notified once approved.');
-    // Reset form
-    setFormData({
-      bloodType: '',
-      units: '',
-      urgency: '',
-      patientName: '',
-      patientAge: '',
-      reason: '',
-      doctorName: '',
-      contactNumber: '',
-      requiredBy: '',
-      notes: '',
-    });
+    setLoading(true);
+    setError('');
+
+    try {
+      const requestData = {
+        hospital_id: parseInt(formData.hospitalId),
+        blood_type: formData.bloodType,
+        units_requested: parseInt(formData.units),
+        urgency_level: formData.urgency.toLowerCase(),
+        patient_name: formData.patientName,
+        patient_age: parseInt(formData.patientAge),
+        patient_gender: formData.patientGender,
+        diagnosis_reason: formData.reason,
+        doctor_name: formData.doctorName,
+        doctor_contact_number: formData.contactNumber,
+        required_by_date: formData.requiredBy,
+        notes: formData.notes || null,
+      };
+
+      await requestAPI.create(requestData);
+      alert('Blood request submitted successfully! You will be notified once approved.');
+      router.push('/admin/requests');
+    } catch (err) {
+      console.error('Request submission error:', err);
+      setError(err.message || 'Failed to submit request. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCancel = () => {
+    router.push('/');
   };
 
   const bloodTypes = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'];
-  const urgencyLevels = ['Emergency', 'Urgent', 'Routine'];
+  const urgencyLevels = ['Normal', 'Urgent', 'Emergency'];
+  const genders = ['Male', 'Female', 'Other'];
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -60,6 +100,26 @@ export default function RequestBlood() {
             </div>
 
             <form onSubmit={handleSubmit}>
+              {error && (
+                <div className="mb-6 bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                  {error}
+                </div>
+              )}
+
+              <h2 className="text-xl font-bold text-gray-800 mb-4">Hospital Selection</h2>
+              <div className="mb-6">
+                <FormInput
+                  label="Select Hospital"
+                  type="select"
+                  name="hospitalId"
+                  value={formData.hospitalId}
+                  onChange={handleChange}
+                  options={hospitals.map(h => ({ value: h.hospital_id, label: h.name }))}
+                  required
+                  disabled={loading}
+                />
+              </div>
+
               <h2 className="text-xl font-bold text-gray-800 mb-4">Blood Request Details</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <FormInput
@@ -70,6 +130,7 @@ export default function RequestBlood() {
                   onChange={handleChange}
                   options={bloodTypes}
                   required
+                  disabled={loading}
                 />
                 <FormInput
                   label="Units Required"
@@ -78,6 +139,7 @@ export default function RequestBlood() {
                   value={formData.units}
                   onChange={handleChange}
                   required
+                  disabled={loading}
                 />
                 <FormInput
                   label="Urgency Level"
@@ -87,6 +149,7 @@ export default function RequestBlood() {
                   onChange={handleChange}
                   options={urgencyLevels}
                   required
+                  disabled={loading}
                 />
               </div>
 
@@ -98,6 +161,7 @@ export default function RequestBlood() {
                   value={formData.requiredBy}
                   onChange={handleChange}
                   required
+                  disabled={loading}
                 />
                 <FormInput
                   label="Contact Number"
@@ -106,6 +170,7 @@ export default function RequestBlood() {
                   value={formData.contactNumber}
                   onChange={handleChange}
                   required
+                  disabled={loading}
                 />
               </div>
 
@@ -118,6 +183,7 @@ export default function RequestBlood() {
                     value={formData.patientName}
                     onChange={handleChange}
                     required
+                    disabled={loading}
                   />
                 </div>
                 <FormInput
@@ -127,23 +193,36 @@ export default function RequestBlood() {
                   value={formData.patientAge}
                   onChange={handleChange}
                   required
+                  disabled={loading}
                 />
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
                 <FormInput
                   label="Doctor Name"
                   name="doctorName"
                   value={formData.doctorName}
                   onChange={handleChange}
                   required
+                  disabled={loading}
                 />
                 <FormInput
-                  label="Reason for Transfusion"
+                  label="Patient Gender"
+                  type="select"
+                  name="patientGender"
+                  value={formData.patientGender}
+                  onChange={handleChange}
+                  options={genders}
+                  required
+                  disabled={loading}
+                />
+                <FormInput
+                  label="Diagnosis/Reason"
                   name="reason"
                   value={formData.reason}
                   onChange={handleChange}
                   required
+                  disabled={loading}
                 />
               </div>
 
@@ -154,40 +233,27 @@ export default function RequestBlood() {
                   name="notes"
                   value={formData.notes}
                   onChange={handleChange}
+                  disabled={loading}
                 />
-              </div>
-
-              {/* Available Blood Units Info */}
-              <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <div className="flex items-center mb-3">
-                  <FaTint className="text-blue-600 text-2xl mr-3" />
-                  <h3 className="text-lg font-bold text-gray-800">Current Available Units</h3>
-                </div>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {bloodTypes.map(type => (
-                    <div key={type} className="bg-white p-3 rounded-lg text-center shadow-sm">
-                      <p className="font-bold text-lg text-gray-800">{type}</p>
-                      <p className="text-2xl font-bold text-blue-600">{Math.floor(Math.random() * 20) + 5}</p>
-                      <p className="text-xs text-gray-600">units</p>
-                    </div>
-                  ))}
-                </div>
               </div>
 
               <div className="flex justify-end space-x-4 mt-8">
                 <button
                   type="button"
-                  className="flex items-center px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition"
+                  onClick={handleCancel}
+                  disabled={loading}
+                  className="flex items-center px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <FaTimes className="mr-2" />
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex items-center px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition"
+                  disabled={loading}
+                  className="flex items-center px-6 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <FaSave className="mr-2" />
-                  Submit Request
+                  {loading ? 'Submitting...' : 'Submit Request'}
                 </button>
               </div>
             </form>

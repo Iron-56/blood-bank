@@ -1,21 +1,62 @@
 'use client';
+import { useState, useEffect } from 'react';
 import { FaTint, FaPlus, FaExclamationTriangle, FaChartPie, FaFilter } from 'react-icons/fa';
 import Link from 'next/link';
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from 'recharts';
 import Navbar from '@/app/components/Navbar';
+import { inventoryAPI } from '@/app/lib/api';
 
 export default function Inventory() {
-  // Sample inventory data
-  const inventoryData = [
-    { bloodType: 'A+', available: 45, reserved: 8, expired: 2, expiringSoon: 3 },
-    { bloodType: 'A-', available: 12, reserved: 2, expired: 1, expiringSoon: 1 },
-    { bloodType: 'B+', available: 38, reserved: 6, expired: 1, expiringSoon: 2 },
-    { bloodType: 'B-', available: 8, reserved: 1, expired: 0, expiringSoon: 1 },
-    { bloodType: 'O+', available: 52, reserved: 10, expired: 3, expiringSoon: 4 },
-    { bloodType: 'O-', available: 15, reserved: 3, expired: 1, expiringSoon: 2 },
-    { bloodType: 'AB+', available: 20, reserved: 4, expired: 1, expiringSoon: 1 },
-    { bloodType: 'AB-', available: 5, reserved: 1, expired: 0, expiringSoon: 0 },
-  ];
+  const [inventory, setInventory] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    fetchInventory();
+  }, []);
+
+  const fetchInventory = async () => {
+    try {
+      setLoading(true);
+      console.log('Fetching inventory from API...');
+      const data = await inventoryAPI.getAll();
+      console.log('Inventory data received:', data);
+      console.log('Is array?', Array.isArray(data));
+      console.log('Data length:', data?.length);
+      setInventory(Array.isArray(data) ? data : []);
+      setError('');
+    } catch (err) {
+      console.error('Failed to fetch inventory:', err);
+      console.error('Error details:', {
+        message: err.message,
+        stack: err.stack,
+        name: err.name
+      });
+      setError(err.message || 'Failed to load inventory');
+      setInventory([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Group inventory by blood type and calculate stats
+  const inventoryData = ['A+', 'A-', 'B+', 'B-', 'O+', 'O-', 'AB+', 'AB-'].map(bloodType => {
+    const items = inventory.filter(item => item.blood_type === bloodType);
+    return {
+      bloodType,
+      available: items.filter(item => item.status === 'available').length,
+      reserved: items.filter(item => item.status === 'reserved').length,
+      expired: items.filter(item => item.status === 'expired').length,
+      assigned: items.filter(item => item.status === 'assigned').length,
+      expiringSoon: items.filter(item => {
+        if (item.status !== 'available' && item.status !== 'reserved') return false;
+        const expiryDate = new Date(item.expiry_date);
+        const today = new Date();
+        const daysToExpiry = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
+        return daysToExpiry >= 0 && daysToExpiry <= 7;
+      }).length,
+    };
+  });
 
   const totalAvailable = inventoryData.reduce((sum, item) => sum + item.available, 0);
   const totalReserved = inventoryData.reduce((sum, item) => sum + item.reserved, 0);
@@ -30,8 +71,8 @@ export default function Inventory() {
   const COLORS = ['#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', '#22c55e', '#10b981', '#14b8a6'];
 
   const getStockStatus = (available) => {
-    if (available < 10) return { text: 'Critical', color: 'bg-red-100 text-red-800' };
-    if (available < 20) return { text: 'Low', color: 'bg-yellow-100 text-yellow-800' };
+    if (available === 0) return { text: 'Critical', color: 'bg-red-100 text-red-800' };
+    if (available < 3) return { text: 'Low', color: 'bg-yellow-100 text-yellow-800' };
     return { text: 'Good', color: 'bg-green-100 text-green-800' };
   };
 
@@ -65,25 +106,43 @@ export default function Inventory() {
           </div>
         </div>
 
-        {/* Summary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-green-500 text-white rounded-lg shadow-md p-6">
-            <p className="text-green-100 text-sm font-medium">Available Units</p>
-            <p className="text-4xl font-bold mt-2">{totalAvailable}</p>
+        {/* Error State */}
+        {error && (
+          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+            Error loading inventory: {error}
           </div>
-          <div className="bg-blue-500 text-white rounded-lg shadow-md p-6">
-            <p className="text-blue-100 text-sm font-medium">Reserved Units</p>
-            <p className="text-4xl font-bold mt-2">{totalReserved}</p>
+        )}
+
+        {/* Loading State */}
+        {loading && (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600 mx-auto"></div>
+            <p className="mt-4 text-gray-600">Loading inventory data...</p>
           </div>
-          <div className="bg-yellow-500 text-white rounded-lg shadow-md p-6">
-            <p className="text-yellow-100 text-sm font-medium">Expiring Soon</p>
-            <p className="text-4xl font-bold mt-2">{totalExpiringSoon}</p>
-          </div>
-          <div className="bg-red-500 text-white rounded-lg shadow-md p-6">
-            <p className="text-red-100 text-sm font-medium">Expired</p>
-            <p className="text-4xl font-bold mt-2">{totalExpired}</p>
-          </div>
-        </div>
+        )}
+
+        {/* Inventory Content */}
+        {!loading && (
+          <>
+            {/* Summary Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+              <div className="bg-green-500 text-white rounded-lg shadow-md p-6">
+                <p className="text-green-100 text-sm font-medium">Available Units</p>
+                <p className="text-4xl font-bold mt-2">{totalAvailable}</p>
+              </div>
+              <div className="bg-blue-500 text-white rounded-lg shadow-md p-6">
+                <p className="text-blue-100 text-sm font-medium">Reserved Units</p>
+                <p className="text-4xl font-bold mt-2">{totalReserved}</p>
+              </div>
+              <div className="bg-yellow-500 text-white rounded-lg shadow-md p-6">
+                <p className="text-yellow-100 text-sm font-medium">Expiring Soon</p>
+                <p className="text-4xl font-bold mt-2">{totalExpiringSoon}</p>
+              </div>
+              <div className="bg-red-500 text-white rounded-lg shadow-md p-6">
+                <p className="text-red-100 text-sm font-medium">Expired</p>
+                <p className="text-4xl font-bold mt-2">{totalExpired}</p>
+              </div>
+            </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
           {/* Blood Type Distribution Chart */}
@@ -205,6 +264,8 @@ export default function Inventory() {
             </table>
           </div>
         </div>
+          </>
+        )}
       </div>
     </div>
   );
