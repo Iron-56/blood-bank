@@ -1,8 +1,8 @@
-# 🏥 Blood Bank Management System
+# Blood Bank Management System
 
 A comprehensive blood bank management system with Flask backend (direct PostgreSQL queries) and Next.js frontend.
 
-## 📊 Features
+## Features
 
 - **Donor Management**: Register, track, and manage blood donors
 - **Hospital Management**: Register hospitals and manage blood requests
@@ -13,14 +13,14 @@ A comprehensive blood bank management system with Flask backend (direct PostgreS
 - **User Management**: Role-based access (Admin, Hospital, Donor, Staff)
 - **Audit Logging**: Track all system changes
 
-## 🏗️ Architecture
+## Architecture
 
 - **Frontend**: Next.js 16 + React 19 + Tailwind CSS
 - **Backend**: Flask 3.0 with direct PostgreSQL queries
 - **Database**: PostgreSQL with 8 normalized tables
 - **API**: RESTful JSON API with CORS support
 
-## 📦 Database Schema (8 Tables)
+## Database Schema (8 Tables)
 
 1. **donor** - Donor personal information and status
 2. **hospital** - Hospital registration and contact details
@@ -31,7 +31,7 @@ A comprehensive blood bank management system with Flask backend (direct PostgreS
 7. **users** - Authentication and authorization
 8. **audit_log** - System activity audit trail
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -91,7 +91,7 @@ npm run dev
 
 Frontend will run at `http://localhost:3000`
 
-## 📡 API Documentation
+## API Documentation
 
 See [backend/README.md](backend/README.md) for complete API documentation.
 
@@ -124,7 +124,7 @@ See [backend/README.md](backend/README.md) for complete API documentation.
 - Donor statistics
 - Pending requests with priorities
 
-## 🔐 Security Features
+## Security Features
 
 - Parameterized SQL queries (SQL injection protection)
 - CORS configuration
@@ -132,94 +132,35 @@ See [backend/README.md](backend/README.md) for complete API documentation.
 - Audit logging for accountability
 - Input validation on all endpoints
 
-## 📋 Project Structure
+## Project Structure
 
 ```
 blood-bank/
 ├── backend/
-│   ├── app.py                 # Main Flask application
-│   ├── db_utils.py            # Database utilities
-│   ├── requirements.txt       # Python dependencies
-│   ├── .env.example          # Environment template
+│   ├── app.py
+│   ├── db_utils.py
+│   ├── requirements.txt
+│   ├── .env.example
 │   ├── database/
-│   │   └── schema.sql        # Database schema
+│   │   └── schema.sql
 │   └── routes/
-│       ├── donors.py         # Donor endpoints
-│       ├── hospitals.py      # Hospital endpoints
-│       ├── donations.py      # Donation endpoints
-│       ├── inventory.py      # Inventory endpoints
-│       ├── requests.py       # Request endpoints
-│       ├── transactions.py   # Transaction endpoints
-│       ├── users.py          # User endpoints
-│       └── dashboard.py      # Dashboard endpoints
+│       ├── donors.py
+│       ├── hospitals.py
+│       ├── donations.py
+│       ├── inventory.py
+│       ├── requests.py
+│       ├── transactions.py
+│       ├── users.py
+│       └── dashboard.py
 │
 └── frontend/
     ├── app/
-    │   ├── page.js           # Landing page
-    │   ├── dashboard/        # Dashboard
-    │   ├── donor/            # Donor management
-    │   ├── hospital/         # Hospital management
-    │   ├── inventory/        # Inventory management
-    │   ├── admin/            # Admin panel
-    │   └── components/       # Reusable components
+    │   ├── page.js
+    │   ├── dashboard/
+    │   ├── donor/
+    │   ├── hospital/
+    │   ├── inventory/
+    │   ├── admin/
+    │   └── components/
     └── package.json
 ```
-
-## 🧪 Testing the API
-
-```bash
-# Check health
-curl http://localhost:5000/health
-
-# Get all donors
-curl http://localhost:5000/api/donors
-
-# Get dashboard stats
-curl http://localhost:5000/api/dashboard/stats
-
-# Get available blood inventory
-curl "http://localhost:5000/api/inventory?status=available"
-```
-
-## 📈 Database Normalization (3NF)
-
-- **1NF**: All attributes are atomic
-- **2NF**: No partial dependencies
-- **3NF**: No transitive dependencies
-- Uses ENUM types for constrained values
-- Foreign keys ensure referential integrity
-- Indexes on frequently queried columns
-
-## 🤝 Contributing
-
-1. Follow RESTful API conventions
-2. Use parameterized queries for all SQL
-3. Maintain database normalization
-4. Add proper error handling
-5. Document all endpoints
-
-## 📄 License
-
-MIT License
-
-## 🐛 Troubleshooting
-
-### Database Connection Issues
-- Check PostgreSQL is running: `pg_isready`
-- Verify credentials in `.env`
-- Check database exists: `psql -l | grep blood_bank`
-
-### Port Already in Use
-- Backend: Change port in `app.py` (default: 5000)
-- Frontend: Use `npm run dev -- -p 3001`
-
-### CORS Errors
-- Verify `CORS_ORIGINS` in backend `.env`
-- Check frontend is running on allowed origin
-
-## 📞 Support
-
-For issues and questions:
-- Check [backend/README.md](backend/README.md) for API details
-- Review database schema in `backend/database/schema.sql`
-- Check frontend documentation in `frontend/PAGES_DOCUMENTATION.md`
